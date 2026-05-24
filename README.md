@@ -10,7 +10,8 @@ Identify which of **17 popular games** a screenshot belongs to — on direct scr
 
 Machine Learning 2 Final Project — by **Yizhuo Li**, **Elaine Wang**, **Cecilia Hua**, and **Cassie Li**.
 
-## Table of Contents
+<details>
+<summary><b>Table of Contents</b></summary>
 
 - [Features](#features)
 - [Architecture](#architecture)
@@ -23,6 +24,12 @@ Machine Learning 2 Final Project — by **Yizhuo Li**, **Elaine Wang**, **Cecili
 - [Authors](#authors)
 - [Acknowledgments](#acknowledgments)
 - [License](#license)
+
+</details>
+
+---
+
+# 📌 Overview
 
 ## Features
 
@@ -93,6 +100,10 @@ flowchart LR
 
 **Tech stack:** Python 3.13 · PyTorch (ResNet-50) · Gradio · Mobile SAM · OpenCV · yt-dlp · HuggingFace `datasets`.
 
+---
+
+# 🧠 Methodology & Results
+
 ## Methodology
 
 ### Problem
@@ -138,7 +149,14 @@ The demo accepts photos of a screen, not just screenshots. To classify those rel
 
 Per-class accuracy is **98–100%**. Accuracy saturated in just 4 epochs, so training was stopped early — evidence the bottleneck was data quality and geometry, not model capacity. The few misclassifications are between visually similar games (photorealistic shooters, or sandbox titles like Minecraft ↔ Roblox). See `classification_report.txt`, `confusion_matrix.png`, and `training_curves.png`.
 
+---
+
+# 🚀 Getting Started
+
 ## Project Structure
+
+<details>
+<summary>Click to expand the file tree</summary>
 
 ```
 .
@@ -167,14 +185,14 @@ Per-class accuracy is **98–100%**. Accuracy saturated in just 4 epochs, so tra
 
 > **Run convention:** always run scripts **from the project root** (e.g. `python model/train.py`). Scripts add the root to `sys.path` to resolve `import config`; `best_model.pth` / `examples/` / `mobile_sam.pt` / datasets are all paths relative to the root.
 
-## Getting Started
+</details>
 
-### Prerequisites
+## Prerequisites
 
 - Python 3.13
 - An NVIDIA GPU is recommended for training (CPU works for the demo, just slower).
 
-### Installation
+## Installation
 
 ```bash
 pip install -r requirements.txt
@@ -189,30 +207,36 @@ The repo ships a trained `best_model.pth`, so the demo runs without any training
 
 ## Usage
 
-### Run the demo
+**Run the demo**
 
 ```bash
 python demo/app.py
 ```
 Opens at **http://localhost:7860** and prints a public `*.gradio.live` link. Toggle between **Screenshot** and **Photo of Screen** modes (the latter auto-starts the webcam).
 
-### Train & evaluate
-
-Set `DATA_SOURCE=local` to use the 17-class merged set (otherwise it falls back to the online HF 10-class baseline):
+**Train & evaluate** — set `DATA_SOURCE=local` to use the 17-class merged set (otherwise it falls back to the online HF 10-class baseline):
 
 ```powershell
 $env:DATA_SOURCE='local'; python model/train.py   # → best_model.pth + training_history.json
 $env:DATA_SOURCE='local'; python model/eval.py    # → report + confusion matrix + curves
 ```
 
-### Rebuild the dataset
+<details>
+<summary>Rebuild the dataset from scratch</summary>
 
 ```bash
 python data/export_hf_dataset.py --output-dir dataset_hf   # classic 10 classes
 python data/collect_youtube_to_1000.py                     # self-collected 10 classes
 python data/build_combined_dataset.py                      # merge → 17 classes
 ```
+
 Full data-collection methodology and options are in **[DATA_COLLECTION.md](DATA_COLLECTION.md)**; per-stage details are in the folder READMEs.
+
+</details>
+
+---
+
+# 👥 Project Info
 
 ## Contributing
 
