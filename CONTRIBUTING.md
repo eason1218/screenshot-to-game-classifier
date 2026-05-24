@@ -30,10 +30,10 @@ Datasets and other weights are not in the repo (see `.gitignore`); rebuild them 
 
 | Area | Folder | Owner (course) |
 |------|--------|----------------|
-| Data pipeline | `data/` | Data team |
-| Model & training | `model/` | Model team |
-| Demo & inference | `demo/` | Demo team |
-| Shared config | `config.py` | All (coordinate changes) |
+| Data pipeline | `data/` | Cecilia Hua |
+| Model & training | `model/` | Yizhuo Li |
+| Demo & inference | `demo/` | Elaine Wang |
+| Shared config | `config.py` | Cassie Li |
 
 ## Pull requests
 
