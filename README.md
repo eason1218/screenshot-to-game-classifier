@@ -10,6 +10,10 @@ Identify which of **17 popular games** a screenshot belongs to — on direct scr
 
 Machine Learning 2 Final Project — by **Yizhuo Li**, **Elaine Wang**, **Cecilia Hua**, and **Cassie Li**.
 
+![Demo](assets/demo.png)
+
+> *Photo-of-screen mode — a phone photo of a screen running Fortnite: the app detects the screen (green corners), corrects the perspective, and classifies it as **Fortnite (99.5%)**.*
+
 <details>
 <summary><b>Table of Contents</b></summary>
 
