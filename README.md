@@ -116,6 +116,8 @@ curl.exe -L https://hf-mirror.com/dhkim2810/MobileSAM/resolve/main/mobile_sam.pt
 
 ## 下载数据（采集训练/测试数据）
 
+> 📄 **完整的数据采集方法论**（数据从哪来、怎么抽帧去重、如何复现）见 [`DATA_COLLECTION.md`](DATA_COLLECTION.md)。下面是快速命令。
+
 ### Hugging Face baseline
 
 如需使用之前的公开 baseline 数据集，可直接下载/导出到本地：
