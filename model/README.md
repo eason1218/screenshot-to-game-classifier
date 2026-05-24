@@ -13,10 +13,10 @@ Owns the network architecture, training loop, and evaluation / metrics.
 ## Usage (run from the project root)
 
 ```powershell
-# Train -> saves best_model.pth + training_history.json (best on validation)
+# Train -> saves checkpoints/best_model.pth + results/training_history.json (best on validation)
 $env:DATA_SOURCE='local'; python model/train.py
 
-# Evaluate -> classification_report.txt + confusion_matrix.png + training_curves.png
+# Evaluate -> results/classification_report.txt + results/confusion_matrix.png + results/training_curves.png
 $env:DATA_SOURCE='local'; python model/eval.py
 ```
 
@@ -33,7 +33,7 @@ $env:DATA_SOURCE='local'; python model/eval.py
 
 ## Notes
 
-- **Artifact paths are relative to the project root** (`best_model.pth` / `training_history.json`), so always run from the root.
+- **Artifact paths are relative to the project root** (`checkpoints/best_model.pth` / `results/training_history.json`), so always run from the root.
 - When running in the background, Python stdout is block-buffered; add `$env:PYTHONUNBUFFERED='1'` for live logs, and use `nvidia-smi` to confirm the GPU is actually busy rather than staring at an empty log.
 - The GPU is RTX 50-series (Blackwell, sm_120), so torch must be the cu128 build, otherwise `cuda.is_available()` is True but kernels error at runtime.
 - Changing the class count requires updating `config.NUM_CLASSES` + `config.CLASS_NAMES` and **retraining** (the FC dimension changes).

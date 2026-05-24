@@ -16,7 +16,7 @@ env/
 # out of the box. (best_model.pth is ~90 MB — under GitHub's 100 MB hard limit.)
 *.pth
 *.pt
-!best_model.pth
+!checkpoints/best_model.pth
 
 # ── Datasets (large; rebuild with the data/ scripts, see README) ──
 dataset/

@@ -29,10 +29,10 @@ The detected quadrilateral is perspective-corrected via a homography before bein
 
 - **Preprocessing must match training**: `app.py`'s `_transform` reuses `from data.data import LetterboxResize`; if you change it, keep all three (`train_tf` / `eval_tf` / `app._transform`) in sync, or inference geometry breaks and accuracy drops.
 - The `warnings.filterwarnings` calls at the top of `app.py` must come **before** `from demo.screen_crop import ...` (to suppress timm / mobile_sam noise) — don't reorder them.
-- Depends on `best_model.pth` (produced by the model team, at the project root), so run from the root.
-- Mobile SAM weights `mobile_sam.pt` (~40 MB) download automatically on first use; if `huggingface.co` is unreachable, download to the project root first:
+- Depends on `checkpoints/best_model.pth` (produced by the model team), so run from the root.
+- Mobile SAM weights `checkpoints/mobile_sam.pt` (~40 MB) download automatically on first use; if `huggingface.co` is unreachable, download manually first:
   ```bash
-  curl.exe -L https://hf-mirror.com/dhkim2810/MobileSAM/resolve/main/mobile_sam.pt -o mobile_sam.pt
+  curl.exe -L https://hf-mirror.com/dhkim2810/MobileSAM/resolve/main/mobile_sam.pt -o checkpoints/mobile_sam.pt
   ```
 - Example images come from the project-root `examples/`; `load_sam()` warms up at startup so the first photo isn't slow.
 

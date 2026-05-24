@@ -22,7 +22,7 @@ _ASPECT_HI  = 4.5
 _sam_gen    = None   # SamAutomaticMaskGenerator, or None
 _sam_tried  = False  # True after the first load attempt
 
-MOBILE_SAM_CKPT = "mobile_sam.pt"
+MOBILE_SAM_CKPT = "checkpoints/mobile_sam.pt"
 MOBILE_SAM_URL  = (
     "https://huggingface.co/dhkim2810/MobileSAM/resolve/main/mobile_sam.pt"
 )
@@ -45,6 +45,7 @@ def load_sam() -> object | None:
         ckpt = Path(MOBILE_SAM_CKPT)
         if not ckpt.exists():
             import urllib.request
+            ckpt.parent.mkdir(parents=True, exist_ok=True)
             print("Downloading Mobile SAM weights (~40 MB)…")
             urllib.request.urlretrieve(MOBILE_SAM_URL, ckpt)
             print("Download complete.")

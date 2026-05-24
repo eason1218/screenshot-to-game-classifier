@@ -99,6 +99,10 @@ def main() -> None:
     device = torch.device(config.DEVICE)
     print(f"Using device: {device}")
 
+    # Ensure output folders exist (checkpoints/ for the model, results/ for history)
+    os.makedirs(os.path.dirname(config.MODEL_SAVE_PATH) or ".", exist_ok=True)
+    os.makedirs(os.path.dirname(config.HISTORY_SAVE_PATH) or ".", exist_ok=True)
+
     train_loader, val_loader, _ = get_dataloaders()
 
     model = get_model(num_classes=config.NUM_CLASSES, pretrained=True).to(device)

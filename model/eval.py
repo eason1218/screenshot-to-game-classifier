@@ -60,7 +60,7 @@ def plot_confusion_matrix(
     labels: np.ndarray,
     preds: np.ndarray,
     class_names: list,
-    save_path: str = "confusion_matrix.png",
+    save_path: str = "results/confusion_matrix.png",
 ) -> None:
     """Save a seaborn annotated heatmap of the confusion matrix."""
     cm = confusion_matrix(labels, preds)
@@ -86,7 +86,7 @@ def plot_confusion_matrix(
 
 def plot_training_curves(
     history_path: str = config.HISTORY_SAVE_PATH,
-    save_path: str = "training_curves.png",
+    save_path: str = "results/training_curves.png",
 ) -> None:
     """Load the JSON training history and save loss + accuracy curves."""
     with open(history_path) as f:
@@ -122,6 +122,8 @@ def main() -> None:
     device = torch.device(config.DEVICE)
     print(f"Using device: {device}")
 
+    os.makedirs("results", exist_ok=True)
+
     _, _, test_loader = get_dataloaders()
 
     model = get_model(num_classes=config.NUM_CLASSES, pretrained=False)
@@ -148,9 +150,9 @@ def main() -> None:
     report = classification_report(labels, preds, target_names=config.CLASS_NAMES)
     print("\nClassification Report:\n", report)
 
-    with open("classification_report.txt", "w") as f:
+    with open("results/classification_report.txt", "w") as f:
         f.write(report)
-    print("Classification report saved to classification_report.txt")
+    print("Classification report saved to results/classification_report.txt")
 
     plot_confusion_matrix(labels, preds, config.CLASS_NAMES)
     plot_training_curves()

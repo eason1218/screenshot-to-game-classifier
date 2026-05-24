@@ -36,8 +36,8 @@ CLASS_NAMES = [
 ]
 NUM_CLASSES = len(CLASS_NAMES)
 
-MODEL_SAVE_PATH = "best_model.pth"
-HISTORY_SAVE_PATH = "training_history.json"
+MODEL_SAVE_PATH = "checkpoints/best_model.pth"
+HISTORY_SAVE_PATH = "results/training_history.json"
 DATASET_DIR = "dataset_combined"
 HF_DATASET_NAME = "Bingsu/Gameplay_Images"
 SEED = 42

@@ -147,7 +147,7 @@ The demo accepts photos of a screen, not just screenshots. To classify those rel
 | Best validation | **99.65%** (epoch 4, early-stopped) |
 | **Test accuracy** | **99.53%** (1,700 held-out images) |
 
-Per-class accuracy is **98–100%**. Accuracy saturated in just 4 epochs, so training was stopped early — evidence the bottleneck was data quality and geometry, not model capacity. The few misclassifications are between visually similar games (photorealistic shooters, or sandbox titles like Minecraft ↔ Roblox). See `classification_report.txt`, `confusion_matrix.png`, and `training_curves.png`.
+Per-class accuracy is **98–100%**. Accuracy saturated in just 4 epochs, so training was stopped early — evidence the bottleneck was data quality and geometry, not model capacity. The few misclassifications are between visually similar games (photorealistic shooters, or sandbox titles like Minecraft ↔ Roblox). See `results/classification_report.txt`, `results/confusion_matrix.png`, and `results/training_curves.png`.
 
 ---
 
@@ -176,14 +176,20 @@ Per-class accuracy is **98–100%**. Accuracy saturated in just 4 epochs, so tra
 ├── demo/                          # DEMO TEAM  → demo/README.md
 │   ├── app.py                     #   Gradio UI (screenshot / photo-of-screen)
 │   └── screen_crop.py             #   screen detection + perspective correction
+├── checkpoints/                   # model weights
+│   └── best_model.pth             #   shipped 17-class model (test 99.53%)
+├── results/                       # evaluation outputs
+│   ├── classification_report.txt
+│   ├── confusion_matrix.png
+│   ├── training_curves.png
+│   └── training_history.json
 ├── DATA_COLLECTION.md             # full data-collection methodology
 ├── requirements.txt
 ├── CONTRIBUTING.md
-├── LICENSE                        # MIT
-└── best_model.pth                 # shipped 17-class model (test 99.53%)
+└── LICENSE                        # MIT
 ```
 
-> **Run convention:** always run scripts **from the project root** (e.g. `python model/train.py`). Scripts add the root to `sys.path` to resolve `import config`; `best_model.pth` / `examples/` / `mobile_sam.pt` / datasets are all paths relative to the root.
+> **Run convention:** always run scripts **from the project root** (e.g. `python model/train.py`). Scripts add the root to `sys.path` to resolve `import config`; `checkpoints/` / `results/` / `examples/` / datasets are all paths relative to the root.
 
 </details>
 
@@ -217,7 +223,7 @@ Opens at **http://localhost:7860** and prints a public `*.gradio.live` link. Tog
 **Train & evaluate** — set `DATA_SOURCE=local` to use the 17-class merged set (otherwise it falls back to the online HF 10-class baseline):
 
 ```powershell
-$env:DATA_SOURCE='local'; python model/train.py   # → best_model.pth + training_history.json
+$env:DATA_SOURCE='local'; python model/train.py   # → checkpoints/best_model.pth + results/training_history.json
 $env:DATA_SOURCE='local'; python model/eval.py    # → report + confusion matrix + curves
 ```
 

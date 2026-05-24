@@ -47,7 +47,7 @@ from data.data import get_dataloaders, get_local_dataloaders, get_transforms, Le
 - Adding / replacing game classes requires updating `config.CLASS_NAMES` and `config.NUM_CLASSES` in sync.
 - Local `ImageFolder` labels follow alphabetical folder order; before the final training run, make `config.CLASS_NAMES` match the printed `Class mapping` to avoid label mismatch.
 - `demo/app.py` reuses `LetterboxResize` for inference — don't change the demo preprocessing separately.
-- The root `best_model.pth` is the trained 17-class model; changing classes means retraining.
+- `checkpoints/best_model.pth` is the trained 17-class model; changing classes means retraining.
 
 ## For the final report (data section)
 
