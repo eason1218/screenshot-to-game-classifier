@@ -1,43 +1,43 @@
-# 模型组 `model/`
+# Model team `model/`
 
-负责网络结构、训练流程、评估与指标产出。
+Owns the network architecture, training loop, and evaluation / metrics.
 
-## 文件
+## Files
 
-| 文件 | 职责 |
-|------|------|
-| `model.py` | ResNet-50（IMAGENET1K_V2 预训练，替换 FC 层）；`get_model(num_classes, pretrained)` |
-| `train.py` | 训练循环，保存最优检查点 |
-| `eval.py` | 测试集评估，产出报告与图表 |
+| File | Responsibility |
+|------|----------------|
+| `model.py` | ResNet-50 (IMAGENET1K_V2 pretrained, FC layer replaced); `get_model(num_classes, pretrained)` |
+| `train.py` | Training loop, saves the best checkpoint |
+| `eval.py` | Test-set evaluation, produces the report & figures |
 
-## 用法（从项目根目录运行）
+## Usage (run from the project root)
 
-```bash
-# 训练 → 保存 best_model.pth + training_history.json（按验证集最优保存）
-python model/train.py
+```powershell
+# Train -> saves best_model.pth + training_history.json (best on validation)
+$env:DATA_SOURCE='local'; python model/train.py
 
-# 评估 → classification_report.txt + confusion_matrix.png + training_curves.png
-python model/eval.py
+# Evaluate -> classification_report.txt + confusion_matrix.png + training_curves.png
+$env:DATA_SOURCE='local'; python model/eval.py
 ```
 
-- 超参：Adam，lr=1e-4，10 epochs，batch 32（见根目录 `config.py`）
-- 训练时长：~26 min（GPU）
-- 数据来自数据组：`from data.data import get_dataloaders`
+- Hyperparameters: Adam, lr=1e-4, batch 32 (see root `config.py`; `NUM_EPOCHS=5`).
+- **Set `DATA_SOURCE=local`** to train on the 17-class merged set; without it, training falls back to the online HF 10-class baseline.
+- Data comes from the data team: `from data.data import get_dataloaders`.
 
-## 当前指标
+## Current metrics (17-class merged set)
 
-| 指标 | 数值 |
-|------|------|
-| 最佳验证准确率 | 99.9%（epoch 8） |
-| 测试准确率 | 99.90%（1000 张仅 1 张错：Forza→Apex） |
+| Metric | Value |
+|--------|-------|
+| Best validation accuracy | 99.65% (epoch 4, early-stopped) |
+| Test accuracy | 99.53% (1,700 images) |
 
-## 注意点
+## Notes
 
-- **产物路径相对项目根**（`best_model.pth` / `training_history.json` 等），必须从根目录运行
-- 后台跑 `python model/train.py 2>&1 | Tee-Object` 时 Python stdout 块缓冲，日志要进程退出才刷新；想实时看加 `$env:PYTHONUNBUFFERED=1`；判断是否真在跑用 `nvidia-smi` 看 GPU 占用，别看空日志
-- GPU 是 RTX 50 系（Blackwell, sm_120），torch 须 cu128，否则 `cuda.is_available()` 为 True 但 kernel 报错
-- 改类别数需同步 `config.NUM_CLASSES` + `config.CLASS_NAMES`，且必须重训（FC 层维度变）
+- **Artifact paths are relative to the project root** (`best_model.pth` / `training_history.json`), so always run from the root.
+- When running in the background, Python stdout is block-buffered; add `$env:PYTHONUNBUFFERED='1'` for live logs, and use `nvidia-smi` to confirm the GPU is actually busy rather than staring at an empty log.
+- The GPU is RTX 50-series (Blackwell, sm_120), so torch must be the cu128 build, otherwise `cuda.is_available()` is True but kernels error at runtime.
+- Changing the class count requires updating `config.NUM_CLASSES` + `config.CLASS_NAMES` and **retraining** (the FC dimension changes).
 
-## 依赖
+## Dependencies
 
 `torch` `torchvision` `scikit-learn` `matplotlib` `seaborn` `tqdm`

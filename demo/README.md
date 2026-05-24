@@ -1,42 +1,42 @@
-# Demo 组 `demo/`
+# Demo team `demo/`
 
-负责 Gradio 前端，以及拍屏模式的屏幕检测与透视矫正。
+Owns the Gradio frontend and the photo-of-screen detection + perspective correction.
 
-## 文件
+## Files
 
-| 文件 | 职责 |
-|------|------|
-| `app.py` | Gradio Blocks 演示界面，两种模式（radio 切换） |
-| `screen_crop.py` | 手机/显示器屏幕检测 + 透视矫正；`crop_screen()` / `load_sam()` |
+| File | Responsibility |
+|------|----------------|
+| `app.py` | Gradio Blocks UI, two modes (radio toggle) |
+| `screen_crop.py` | Phone / monitor screen detection + perspective correction; `crop_screen()` / `load_sam()` |
 
-## 用法（从项目根目录运行）
+## Usage (run from the project root)
 
 ```bash
 python demo/app.py
 ```
 
-- 本地：http://localhost:7860
-- `demo.launch(share=True)` 同时打印公网 `*.gradio.live` 链接（1 周有效）
-- 两种模式：**直接截图分类** / **拍屏模式**（拍实拍照片自动矫正后分类）
+- Local: http://localhost:7860
+- `demo.launch(share=True)` also prints a public `*.gradio.live` link (valid for 1 week).
+- Two modes: **Screenshot** / **Photo of Screen** (switching to it auto-starts the webcam; take a photo and it's screen-detected + perspective-corrected before classification).
 
-## 拍屏检测流程（`crop_screen`）
+## Screen detection pipeline (`crop_screen`)
 
-四策略依次尝试，返回第一个成功的：
-**Mobile SAM 语义分割**（主）→ 亮度百分位阈值 → Otsu → Canny 边缘（兜底）
-检测到的四边形经单应性变换做透视矫正后送分类器。
+Four strategies tried in order, returning the first that succeeds:
+**Mobile SAM segmentation** (primary) → brightness-percentile threshold → Otsu → Canny edges (fallback).
+The detected quadrilateral is perspective-corrected via a homography before being sent to the classifier.
 
-## 注意点
+## Notes
 
-- **预处理必须与训练一致**：`app.py` 的 `_transform` 复用 `from data.data import LetterboxResize`；改它必须和数据组 `train_tf`/`eval_tf` 三处同步，否则推理几何错位、准确率掉
-- `app.py` 顶部的 `warnings.filterwarnings` 必须在 `from demo.screen_crop import ...` **之前**（屏蔽 timm/mobile_sam 噪音），不要挪动顺序
-- 依赖 `best_model.pth`（模型组训练产出，在项目根），故必须从根目录运行
-- Mobile SAM 权重 `mobile_sam.pt`（~40MB）首次自动下载；国内直连 huggingface.co 会卡，先手动下到项目根：
+- **Preprocessing must match training**: `app.py`'s `_transform` reuses `from data.data import LetterboxResize`; if you change it, keep all three (`train_tf` / `eval_tf` / `app._transform`) in sync, or inference geometry breaks and accuracy drops.
+- The `warnings.filterwarnings` calls at the top of `app.py` must come **before** `from demo.screen_crop import ...` (to suppress timm / mobile_sam noise) — don't reorder them.
+- Depends on `best_model.pth` (produced by the model team, at the project root), so run from the root.
+- Mobile SAM weights `mobile_sam.pt` (~40 MB) download automatically on first use; if `huggingface.co` is unreachable, download to the project root first:
   ```bash
   curl.exe -L https://hf-mirror.com/dhkim2810/MobileSAM/resolve/main/mobile_sam.pt -o mobile_sam.pt
   ```
-- 示例图来自项目根 `examples/`；`load_sam()` 在启动时预热，首张拍屏不卡
+- Example images come from the project-root `examples/`; `load_sam()` warms up at startup so the first photo isn't slow.
 
-## 依赖
+## Dependencies
 
 `gradio` `torch` `torchvision` `Pillow` `opencv-python` `numpy`
-拍屏分割：`mobile_sam`（`pip install git+https://github.com/ChaoningZhang/MobileSAM.git`）
+Screen segmentation: `mobile_sam` (`pip install git+https://github.com/ChaoningZhang/MobileSAM.git`)
