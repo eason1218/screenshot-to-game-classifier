@@ -8,7 +8,7 @@
 
 Identify which of **17 popular games** a screenshot belongs to. It works on direct game screenshots, and also on a photo taken of someone else's phone/monitor screen — it automatically detects the screen boundary, corrects the perspective, and then classifies.
 
-Machine Learning 2 Final Project.
+Machine Learning 2 Final Project — by **Yizhuo Li**, **Elaine Wang**, **Cecilia Hua**, and **Cassie Li**.
 
 ## Features
 
