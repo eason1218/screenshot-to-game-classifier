@@ -6,259 +6,227 @@
 ![Accuracy](https://img.shields.io/badge/test%20accuracy-99.53%25-success)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-识别一张截图属于 **17 款**热门游戏中的哪一款 —— 既支持直接上传游戏截图，也支持拍一张别人手机/显示器屏幕的照片，自动检测屏幕边框、矫正透视后再分类。
+Identify which of **17 popular games** a screenshot belongs to. It works on direct game screenshots, and also on a photo taken of someone else's phone/monitor screen — it automatically detects the screen boundary, corrects the perspective, and then classifies.
 
-Machine Learning 2 Final Project。
+Machine Learning 2 Final Project.
 
 ## Features
 
-- **直接截图分类** — 上传游戏截图，返回 Top-3 预测及置信度
-- **拍屏模式** — 拍实拍手机/显示器照片，自动识别屏幕、矫正透视后分类
-- **屏幕识别流程**：Mobile SAM（语义分割，主策略）→ 亮度百分位 → Otsu → Canny 边缘（兜底）
-- **数据采集工具** — 从 YouTube 下载游戏视频、按时间区间抽帧、感知哈希去重
+- **Direct screenshot classification** — upload a game screenshot, get Top-3 predictions with confidence.
+- **Photo-of-screen mode** — take a photo of a phone/monitor running a game; the screen is detected and perspective-corrected before classification.
+- **Screen detection pipeline**: Mobile SAM (semantic segmentation, primary) → brightness percentile → Otsu → Canny edges (fallbacks).
+- **Data collection tools** — download gameplay videos from YouTube, sample frames over a time window, deduplicate with perceptual hashing.
 
-## 当前本地数据集类别（17 类合并集）
+## Classes (17-class merged set)
 
-经典 HF 10 类 + 自采 YouTube 10 类，按重叠游戏去重合并为 **17 类**：
+Classic HuggingFace 10-class + self-collected YouTube 10-class, de-duplicated on the overlapping games into **17 classes**:
 
 ARCRaiders · Among Us · Apex Legends · CounterStrike2 · Fortnite · Forza Horizon · Free Fire · Genshin Impact · God of War · LeagueOfLegends · MarvelRivals · Minecraft · Roblox · RocketLeague · Subnautica2 · Terraria · Valorant
 
-> Fortnite / Minecraft / Genshin Impact 两套数据源都有，已合并去重。
+> Fortnite / Minecraft / Genshin Impact appear in both sources and were merged.
 
-当前默认本地数据目录是 `dataset_combined/`（由 `data/build_combined_dataset.py` 从 `dataset_hf/` + `dataset_youtube_hq/` 硬链接合并而成，共 20,000 张；训练时每类均衡到 1,000 张）。
+The default local dataset is `dataset_combined/` (built by `data/build_combined_dataset.py` from `dataset_hf/` + `dataset_youtube_hq/` via hard links, 20,000 images total; each class is balanced to 1,000 at training time).
 
-## 模型效果（17 类合并集）
+## Model performance (17-class merged set)
 
-| 项目 | 数值 |
-|------|------|
-| 架构 | ResNet-50（微调，替换 FC 层 → 17 类） |
-| 预训练权重 | IMAGENET1K_V2 |
-| 训练 / 验证 / 测试 | 13,600 / 1,700 / 1,700 张（17 类各均衡 1,000，分层 80/10/10） |
-| 最佳验证准确率 | **99.65%**（epoch 4，提前停止） |
-| 测试准确率 | **99.53%**（1,700 张） |
-| 训练 | 4 epoch 即饱和（RTX 5090，约 1 min/epoch） |
+| Item | Value |
+|------|-------|
+| Architecture | ResNet-50 (fine-tuned, FC layer replaced → 17 classes) |
+| Pretrained weights | IMAGENET1K_V2 |
+| Train / Val / Test | 13,600 / 1,700 / 1,700 (17 classes balanced to 1,000, stratified 80/10/10) |
+| Best validation accuracy | **99.65%** (epoch 4, early-stopped) |
+| Test accuracy | **99.53%** (1,700 images) |
+| Training | saturates in 4 epochs (RTX 5090, ~1 min/epoch) |
 
-> 仅 4 个 epoch 验证准确率即达 99.65%，遂提前停止。每类测试准确率 98–100%。
+> Validation accuracy reached 99.65% in just 4 epochs, so training was stopped early. Per-class test accuracy is 98–100%.
 
-### 几何处理（关键设计）
+### Geometry (key design)
 
-输入统一走 **Letterbox**（等比缩放 + 居中补黑边到 224×224），**训练 / 评估 / 演示推理三方共用同一套几何**。
-相比把 16:9 硬压成正方形（失真）或 Resize+CenterCrop（丢边缘 HUD/小地图），letterbox 不失真也不丢信息（早期 10 类实验中，几何统一把测试准确率从 99.40% 提升到 99.90%）。
+Inputs go through **letterboxing** (aspect-preserving resize + center-pad with black bars to 224×224), and **training / evaluation / demo inference all share the exact same geometry**.
+Compared to squashing 16:9 into a square (distortion) or Resize+CenterCrop (drops edge HUD/minimap), letterboxing distorts nothing and loses nothing. (In an earlier 10-class experiment, unifying the geometry raised test accuracy from 99.40% to 99.90%.)
 
-### 数据增强（仅训练集）
+### Augmentation (training set only)
 
 `LetterboxResize` → `RandomAffine(scale 0.85–1.0, translate 0.05)` → `RandomHorizontalFlip` · `RandomRotation(±15°)` · `RandomPerspective(0.4)` · `ColorJitter` · `RandomGrayscale` · `GaussianBlur` · `RandomErasing`
 
-透视/旋转/模糊等增强专门针对"拍手机屏幕"场景，使模型对倾斜、变形、失焦的游戏画面更鲁棒。
+The perspective/rotation/blur augmentations specifically target the "photo of a screen" scenario, making the model robust to tilted, warped, and out-of-focus game frames.
 
-## 项目结构
+## Project structure
 
-项目按小组分工拆为三个子包，`config.py` 为三组共用契约，留在根目录：
+The project is split into three sub-packages by team role; `config.py` is the shared contract and stays at the root:
 
 ```
-├── config.py                      # 【共享】超参数、类别名、路径常量；DATASET_DIR=dataset_combined
-├── data/                          # 【数据组】
-│   ├── data.py                    #   HF / 本地数据加载、分层切分、平衡采样、数据增强
-│   ├── collect_data.py            #   YouTube 下载 + 时间区间抽帧 + pHash 去重（底层引擎）
-│   ├── collect_youtube_to_1000.py #   按预设搜索词把每个 YouTube 类采到 1000 张
-│   ├── export_hf_dataset.py       #   HF baseline 导出成本地 ImageFolder
-│   ├── build_combined_dataset.py  #   合并 dataset_hf + dataset_youtube_hq → 17 类
-│   ├── clean_data.py              #   坏图 / 低质量 / 重复帧清洗
-│   └── report_data.py             #   类别分布、尺寸分布、切分计划统计
-├── model/                         # 【模型组】
-│   ├── model.py                   #   ResNet-50（替换 FC 层 → 17 类）
-│   ├── train.py                   #   训练循环，保存最优检查点
-│   └── eval.py                    #   测试评估、混淆矩阵、训练曲线
-├── demo/                          # 【Demo 组】
-│   ├── app.py                     #   Gradio 界面（截图 / 拍屏；拍屏自动开摄像头）
-│   └── screen_crop.py             #   手机屏幕检测 + 透视矫正
-├── DATA_COLLECTION.md             # 数据采集方法与复现步骤
+├── config.py                      # [shared] hyperparameters, class names, path constants; DATASET_DIR=dataset_combined
+├── data/                          # [data team]
+│   ├── data.py                    #   HF / local loading, stratified split, balanced sampling, augmentation
+│   ├── collect_data.py            #   YouTube download + time-window frame sampling + pHash dedup (engine)
+│   ├── collect_youtube_to_1000.py #   top up each YouTube class to 1,000 images via preset search queries
+│   ├── export_hf_dataset.py       #   export the HF baseline to a local ImageFolder
+│   ├── build_combined_dataset.py  #   merge dataset_hf + dataset_youtube_hq → 17 classes
+│   ├── clean_data.py              #   filter corrupt / low-quality / duplicate frames
+│   └── report_data.py             #   class distribution, size distribution, split plan
+├── model/                         # [model team]
+│   ├── model.py                   #   ResNet-50 (FC layer replaced → 17 classes)
+│   ├── train.py                   #   training loop, saves the best checkpoint
+│   └── eval.py                    #   test evaluation, confusion matrix, training curves
+├── demo/                          # [demo team]
+│   ├── app.py                     #   Gradio UI (screenshot / photo-of-screen; webcam auto-starts in photo mode)
+│   └── screen_crop.py             #   phone-screen detection + perspective correction
+├── DATA_COLLECTION.md             # data collection method & reproduction steps
 ├── requirements.txt
 ├── LICENSE                        # MIT
-└── best_model.pth                 # 已附带：17 类训练好的模型（test 99.53%）
+└── best_model.pth                 # shipped: trained 17-class model (test 99.53%)
 ```
 
-> **运行约定**：所有脚本一律**从项目根目录**执行（如 `python model/train.py`）。
-> 脚本会自动把根目录加进 `sys.path` 解析 `import config`；`best_model.pth` /
-> `examples/` / `mobile_sam.pt` / `dataset/` 等均为相对根目录的路径，换目录运行会找不到。
+> **Run convention**: always run scripts **from the project root** (e.g. `python model/train.py`).
+> Scripts auto-add the root to `sys.path` to resolve `import config`; `best_model.pth` /
+> `examples/` / `mobile_sam.pt` / `dataset/` are all paths relative to the root, so running from another directory will not find them.
 
-### 小组分工
+### Team roles
 
-| 子包 | 负责人 | 职责范围 |
-|------|--------|----------|
-| `data/` | 数据组 | YouTube 采集、质量清洗、数据报告、本地/HF DataLoader、增强策略 |
-| `model/` | 模型组 | 网络结构、训练流程、评估与指标产出 |
-| `demo/` | Demo 组 | Gradio 前端、拍屏检测与透视矫正 |
-| `config.py` | 三组共管 | 改动需协商（超参/类别名/路径，三组都依赖） |
+| Sub-package | Owner | Responsibilities |
+|-------------|-------|------------------|
+| `data/` | Data team | YouTube collection, quality cleaning, data reports, local/HF DataLoaders, augmentation |
+| `model/` | Model team | Network architecture, training loop, evaluation & metrics |
+| `demo/` | Demo team | Gradio frontend, photo-of-screen detection & perspective correction |
+| `config.py` | Shared | Changes require coordination (hyperparameters/class names/paths affect all three) |
 
-## 安装
+## Installation
 
 ```bash
 pip install -r requirements.txt
 
-# 拍屏模式推荐：启用 Mobile SAM 屏幕分割
+# Recommended for photo-of-screen mode: Mobile SAM screen segmentation
 pip install git+https://github.com/ChaoningZhang/MobileSAM.git
 ```
 
-> **GPU 说明**：若用 RTX 50 系（Blackwell, sm_120），torch 须装 cu128 版本（nightly），cu121/cu124 编译产物不含该架构 kernel，`cuda.is_available()` 返回 True 但实际 kernel 会报错。
+> **GPU note**: on RTX 50-series (Blackwell, sm_120), install the cu128 build of torch (nightly). cu121/cu124 builds do not ship kernels for that architecture — `cuda.is_available()` returns True but kernels will error at runtime.
 
 ---
 
-## 启动前端（演示界面）
+## Launch the demo
 
 ```bash
 python demo/app.py
 ```
 
-- 启动后本地访问 **http://localhost:7860**
-- `app.py` 中 `demo.launch(share=True)` 会同时打印一个公网 `*.gradio.live` 链接，可分享给他人临时访问
-- 界面提供两种模式（radio 切换）：**直接截图分类**（上传/粘贴）与 **拍屏模式**（切到该模式自动开启摄像头取景，拍一张即自动检测屏幕 + 透视矫正）
-- 首次进入拍屏模式时自动下载 Mobile SAM 权重（~40 MB）；国内若直连 huggingface.co 卡住，可先手动下载：
+- After launch, open **http://localhost:7860** locally.
+- `demo.launch(share=True)` in `app.py` also prints a public `*.gradio.live` link you can share temporarily.
+- The UI has two modes (radio toggle): **Screenshot** (upload/paste) and **Photo of Screen** (switching to it auto-starts the webcam; take one shot and it detects the screen + corrects perspective automatically).
+- The first time you enter photo mode, the Mobile SAM weights (~40 MB) are downloaded; if `huggingface.co` is unreachable, download manually first:
 
 ```bash
 curl.exe -L https://hf-mirror.com/dhkim2810/MobileSAM/resolve/main/mobile_sam.pt -o mobile_sam.pt
 ```
 
-> 注意：`app.py` 推理预处理复用 `data.py` 的 `LetterboxResize`，与训练几何严格一致 —— 改动任一处预处理须三处（`train_tf` / `eval_tf` / `app._transform`）同步。
+> Note: `app.py` reuses `data.py`'s `LetterboxResize` for inference preprocessing, kept strictly identical to the training geometry — any preprocessing change must be mirrored in all three places (`train_tf` / `eval_tf` / `app._transform`).
 
 ---
 
-## 下载数据（采集训练/测试数据）
+## Data collection
 
-> 📄 **完整的数据采集方法论**（数据从哪来、怎么抽帧去重、如何复现）见 [`DATA_COLLECTION.md`](DATA_COLLECTION.md)。下面是快速命令。
+> 📄 **Full data collection methodology** (where the data comes from, how frames are sampled & deduplicated, how to reproduce) is in [`DATA_COLLECTION.md`](DATA_COLLECTION.md). Quick commands below.
 
-### Hugging Face baseline
+### HuggingFace baseline
 
-如需使用之前的公开 baseline 数据集，可直接下载/导出到本地：
+To use the public baseline dataset, download/export it locally:
 
 ```bash
 python data/export_hf_dataset.py --output-dir dataset_hf
 python data/report_data.py --dataset-dir dataset_hf --output dataset_hf_report.json
 ```
 
-本地导出后结构为 `dataset_hf/<GameName>/hf_XXXXX.png`，共 10 类、每类 1,000 张。当前的 HF manifest 已归档到 `tobeclean/metadata/dataset_hf_metadata/hf_manifest.csv`。注意它不包含 Valorant、League of Legends、Rocket League；最终训练默认使用更新后的自采 YouTube 数据集 `dataset_youtube_hq/`。
+The local export is `dataset_hf/<GameName>/hf_XXXXX.png`, 10 classes × 1,000 images. It does **not** include Valorant, League of Legends, or Rocket League — those come from the self-collected YouTube set.
 
-`collect_data.py` 从 YouTube 下载游戏视频，按时间区间抽帧、感知哈希去重，输出为
-`dataset/<GameName>/frame_XXXXX.png`，与 `torchvision.datasets.ImageFolder` 格式兼容。
-同时会追加 `dataset/collection_manifest.csv`，记录图片路径、类别、来源 URL、视频时间点和 pHash。
-理想最终数据应来自真实视频帧。当前 `collect_data.py` 会优先使用 YouTube Android/Android VR client 拉真实 MP4/video stream；若 YouTube 被 PO token / SABR 限制挡住，会跳过该视频，不会默认使用低清 storyboard。Storyboard fallback 仅用于临时 debug，需要显式加 `--allow-storyboard`。
+### Prerequisite: YouTube download dependency
 
-### 前置：YouTube 解析依赖（必需）
-
-YouTube 现在用 JS "n-challenge" 门控视频格式，缺少 JS runtime 会报
-`n challenge solving failed` / `No supported JavaScript runtime`。装 **deno** 即可：
+YouTube now gates video formats behind a JS "n-challenge"; without a JS runtime you get `n challenge solving failed` / `No supported JavaScript runtime`. Install **deno**:
 
 ```bash
 winget install denoland.deno
 ```
 
-`collect_data.py` 会**自动探测** winget/scoop 安装的 deno 并注入 PATH（`ensure_deno_on_path()`），无需手动设环境变量。视频下载统一走 YouTube Android / Android VR 客户端（`player_client=android_vr,android`）绕过网页端 SABR 限制，拿到真实 MP4 流。
+`collect_data.py` **auto-detects** a winget/scoop-installed deno and injects it into PATH (`ensure_deno_on_path()`), no manual env-var needed. Downloads go through the YouTube Android / Android VR client (`player_client=android_vr,android`) to bypass the web client's SABR restriction and get a real MP4 stream.
 
-### 用法
+### Usage
 
 ```bash
-# 指定单个 YouTube 链接
+# Single YouTube URL
 python data/collect_data.py --game "Minecraft" --url "https://youtu.be/XXX"
 
-# 只截取视频的某个时间区间（支持 SS / MM:SS / HH:MM:SS）
+# Sample only a time window (SS / MM:SS / HH:MM:SS)
 python data/collect_data.py --game "Minecraft" --url "https://youtu.be/XXX" --start-time 1:30 --end-time 5:00
 
-# YouTube 搜索（自动下载前 N 个结果）
+# YouTube search (downloads the top N results)
 python data/collect_data.py --game "Fortnite" --search "Fortnite gameplay 2024 no commentary" --max-videos 3
 
-# 从 URL 文件批量下载（每行一个链接）
-python data/collect_data.py --game "Genshin Impact" --url-file urls.txt
-
-# 实例：下载这个视频（视频较长，需调大 --max-duration 否则被时长过滤）
-python data/collect_data.py --game "LeagueOfLegends" --url "https://www.youtube.com/watch?v=zKaRQUzTtvM" --max-duration 1000 --fps 1 --max-frames 300
+# Top up all 10 YouTube classes to 1,000 images each
+python data/collect_youtube_to_1000.py
 ```
 
-> 命令均写成单行 —— 本项目在 PowerShell 下运行，PowerShell 不识别 bash 的 `\` 续行符（续行用反引号 `` ` ``）。单行可在 bash / PowerShell 直接粘贴。
+> Commands are single-line — this project runs under PowerShell, which doesn't accept bash's `\` line-continuation (use a backtick `` ` ``). Single-line commands paste cleanly into both bash and PowerShell.
 
-### 常用参数
-
-| 参数 | 说明 | 默认 |
-|------|------|------|
-| `--start-time` / `--end-time` | 抽帧时间区间，`SS` / `MM:SS` / `HH:MM:SS` | 全片 |
-| `--fps` | 每秒采样帧数 | 1.0 |
-| `--max-frames` | 每个视频最多保存帧数 | 500 |
-| `--hash-dist` | 感知哈希去重阈值（越大保留越多） | 8 |
-| `--max-duration` | 跳过时长超过此值（秒）的视频 | 600 |
-| `--output-dir` | 输出根目录 | `dataset` |
-
-> `--max-duration` 默认 600 秒（10 分钟），更长的视频会在**下载前被静默过滤**，采集长视频需手动调大。
-
-### 清洗与统计本地数据
-
-采集后先 dry run，检查坏图、低分辨率图、低信息量帧、过暗/过亮帧和近重复帧：
+### Clean & report local data
 
 ```bash
-python data/clean_data.py --dataset-dir dataset
+# Dry run first: check corrupt / low-res / low-information / too-dark-or-bright / near-duplicate frames
+python data/clean_data.py --dataset-dir dataset_youtube_hq
+
+# After reviewing the report, move rejected images out
+python data/clean_data.py --dataset-dir dataset_youtube_hq --apply
+
+# Generate dataset statistics
+python data/report_data.py --dataset-dir dataset_youtube_hq
 ```
 
-确认报告后移动 rejected 图片到 `dataset_rejected/`：
+### Build the 17-class training set
 
 ```bash
-python data/clean_data.py --dataset-dir dataset --apply
+python data/build_combined_dataset.py
 ```
 
-生成数据集统计报告：
-
-```bash
-python data/report_data.py --dataset-dir dataset
-```
-
-会输出 `dataset_cleaning_report.csv` 和 `dataset_report.json`，可用于 final report 的 data collection / data cleaning 章节。
-
-当前 YouTube 新数据已经整理在：
-
-- `dataset_youtube_hq/`: 10 类 ImageFolder 数据，10,000 张，全部 640×360
-- `tobeclean/reports/dataset_youtube_hq_summary.json`: 数据总览、split plan、caveat
-- `tobeclean/reports/dataset_youtube_hq_class_counts.csv`: 每类数量总表
-- `tobeclean/reports/dataset_youtube_hq_report.json`: 类别数量、尺寸分布、80/10/10 split 统计
-- `tobeclean/reports/dataset_youtube_hq_cleaning_report_final.csv`: 早期清洗记录，扩展后的最终数量以 summary/report JSON 为准
-- `tobeclean/metadata/youtube_1000_expansion_manifest.csv`: YouTube source URL / frame provenance
+Hard-links `dataset_hf/` (classic 10) + `dataset_youtube_hq/` (self-collected 10) into `dataset_combined/`, de-duplicating Fortnite / Minecraft / Genshin Impact → 17 classes, 20,000 images, and writes `combined_manifest.csv` recording each image's source.
 
 ---
 
-## 训练与评估
+## Training & evaluation
 
-仓库已附带训练好的 `best_model.pth`（17 类），想自己重训按下面来。**必须设 `DATA_SOURCE=local`**，否则会去在线下载 HF 10 类基线，与 17 类合并集对不上。
+The repo ships a trained `best_model.pth` (17 classes); to retrain, follow below. **You must set `DATA_SOURCE=local`**, otherwise it downloads the online HF 10-class baseline, which doesn't match the 17-class merged set.
 
 ```powershell
-# 训练 —— 用本地 17 类合并集，保存 best_model.pth 和 training_history.json
+# Train — uses the local 17-class merged set; saves best_model.pth and training_history.json
 $env:DATA_SOURCE='local'; python model/train.py
 
-# 评估 —— 打印分类报告，保存 confusion_matrix.png / training_curves.png
+# Evaluate — prints the classification report, saves confusion_matrix.png / training_curves.png
 $env:DATA_SOURCE='local'; python model/eval.py
 ```
 
-> 不设 `DATA_SOURCE` 时默认走在线 HF 10 类基线（保留原始可复现实验）。
-> 后台运行时 Python stdout 块缓冲，想实时看日志加 `$env:PYTHONUNBUFFERED='1'`；判断训练是否真在跑可用 `nvidia-smi` 看 GPU 占用。
+> Without `DATA_SOURCE`, it defaults to the online HF 10-class baseline (keeps the original reproducible experiment).
+> When running in the background, Python stdout is block-buffered — add `$env:PYTHONUNBUFFERED='1'` for live logs; use `nvidia-smi` to confirm the GPU is actually busy.
 
-## 拍屏模式说明
+## Photo-of-screen mode
 
-上传一张实拍手机/显示器运行游戏的照片：
+Upload a real photo of a phone/monitor running a game:
 
-1. 优先用 **Mobile SAM** 对屏幕区域语义分割
-2. SAM 不可用时依次尝试：亮度百分位阈值 → Otsu → Canny 边缘检测
-3. 检测到的四边形经单应性变换做透视矫正
-4. 矫正后的图像送入分类器（同样走 LetterboxResize）
+1. First, **Mobile SAM** semantically segments the screen region.
+2. If SAM is unavailable, fall back in order to: brightness-percentile threshold → Otsu → Canny edge detection.
+3. The detected quadrilateral is perspective-corrected via a homography.
+4. The corrected image is fed to the classifier (also through `LetterboxResize`).
 
-预览图上的绿色角点表示屏幕检测成功。
+Green corner markers on the preview indicate a successful screen detection.
 
-## 数据集
+## Dataset
 
-**17 类合并集** = 两个来源去重合并，由 `data/build_combined_dataset.py` 构建到 `dataset_combined/`：
+**17-class merged set** = two sources de-duplicated and combined, built into `dataset_combined/` by `data/build_combined_dataset.py`:
 
-1. **经典 HF baseline** — [Bingsu/Gameplay_Images](https://huggingface.co/datasets/Bingsu/Gameplay_Images)，10 类各 1,000 张，导出在 `dataset_hf/`。
-2. **自采 YouTube 高清** — 10 类各 1,000 张真实视频抽帧，在 `dataset_youtube_hq/`。
+1. **Classic HF baseline** — [Bingsu/Gameplay_Images](https://huggingface.co/datasets/Bingsu/Gameplay_Images), 10 classes × 1,000, exported to `dataset_hf/`.
+2. **Self-collected YouTube** — 10 classes × 1,000 frames sampled from real gameplay videos, in `dataset_youtube_hq/`.
 
-两套合并后 Fortnite / Minecraft / Genshin Impact 去重，共 17 类 20,000 张，640×360 PNG。训练时每类均衡到 1,000，经 `data.py` 分层切分 80 / 10 / 10（`seed=42` 可复现）。
+After merging, Fortnite / Minecraft / Genshin Impact are de-duplicated → 17 classes, 20,000 images, 640×360 PNG. At training time, each class is balanced to 1,000 and `data.py` applies a stratified 80/10/10 split (`seed=42`, reproducible).
 
-## 分类结果（测试集，17 类各 100 张，共 1,700）
+## Classification results (test set, 17 classes × 100 = 1,700)
 
-整体测试准确率 **99.53%**，每类 98–100%。完整报告见 `classification_report.txt`：
+Overall test accuracy **99.53%**, per-class 98–100%. Full report in `classification_report.txt`:
 
 ```
                  precision    recall  f1-score   support
@@ -286,10 +254,17 @@ LeagueOfLegends       1.00      1.00      1.00       100
    weighted avg       1.00      1.00      1.00      1700
 ```
 
-误分类均为个位数，集中在写实画风/同类型游戏之间。混淆矩阵见 `confusion_matrix.png`。
+Misclassifications are in the single digits, concentrated between photorealistic / same-genre games. See `confusion_matrix.png`.
+
+## Authors
+
+- Yizhuo Li
+- Elaine Wang
+- Cecilia Hua
+- Cassie Li
 
 ## License
 
-本项目以 [MIT License](LICENSE) 开源。
+Released under the [MIT License](LICENSE).
 
-> 数据来自 [Bingsu/Gameplay_Images](https://huggingface.co/datasets/Bingsu/Gameplay_Images) 及 YouTube 公开 gameplay 视频抽帧，仅用于学习与研究；各游戏画面版权归其各自发行商所有。
+> Data comes from [Bingsu/Gameplay_Images](https://huggingface.co/datasets/Bingsu/Gameplay_Images) and frames sampled from public YouTube gameplay videos, used for study and research only; all game imagery is the property of its respective publishers.
