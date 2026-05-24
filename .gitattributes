@@ -1,0 +1,9 @@
+# Normalize line endings to LF inside the repo (consistent across OSes)
+* text=auto
+
+# Binary assets — never apply line-ending conversion
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.pth  binary
+*.pt   binary

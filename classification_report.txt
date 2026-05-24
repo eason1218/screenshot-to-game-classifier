@@ -1,0 +1,23 @@
+                 precision    recall  f1-score   support
+
+     ARCRaiders       1.00      1.00      1.00       100
+       Among Us       1.00      1.00      1.00       100
+   Apex Legends       0.99      0.98      0.98       100
+ CounterStrike2       1.00      1.00      1.00       100
+       Fortnite       1.00      0.99      0.99       100
+  Forza Horizon       1.00      1.00      1.00       100
+      Free Fire       1.00      0.99      0.99       100
+ Genshin Impact       0.99      0.99      0.99       100
+     God of War       0.99      1.00      1.00       100
+LeagueOfLegends       1.00      1.00      1.00       100
+   MarvelRivals       0.99      1.00      1.00       100
+      Minecraft       1.00      0.98      0.99       100
+         Roblox       0.98      0.99      0.99       100
+   RocketLeague       1.00      1.00      1.00       100
+    Subnautica2       1.00      1.00      1.00       100
+       Terraria       0.99      1.00      1.00       100
+       Valorant       0.99      1.00      1.00       100
+
+       accuracy                           1.00      1700
+      macro avg       1.00      1.00      1.00      1700
+   weighted avg       1.00      1.00      1.00      1700
