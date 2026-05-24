@@ -1,6 +1,12 @@
-# Screenshot to Game Classifier
+# 🎮 Screenshot to Game Classifier
 
-识别一张截图属于 10 款热门游戏中的哪一款 —— 既支持直接上传游戏截图，也支持拍一张别人手机/显示器屏幕的照片，自动检测屏幕边框、矫正透视后再分类。
+![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-ResNet--50-EE4C2C?logo=pytorch&logoColor=white)
+![Gradio](https://img.shields.io/badge/Demo-Gradio-F97316)
+![Accuracy](https://img.shields.io/badge/test%20accuracy-99.53%25-success)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+识别一张截图属于 **17 款**热门游戏中的哪一款 —— 既支持直接上传游戏截图，也支持拍一张别人手机/显示器屏幕的照片，自动检测屏幕边框、矫正透视后再分类。
 
 Machine Learning 2 Final Project。
 
@@ -37,7 +43,7 @@ ARCRaiders · Among Us · Apex Legends · CounterStrike2 · Fortnite · Forza Ho
 ### 几何处理（关键设计）
 
 输入统一走 **Letterbox**（等比缩放 + 居中补黑边到 224×224），**训练 / 评估 / 演示推理三方共用同一套几何**。
-相比把 16:9 硬压成正方形（失真）或 Resize+CenterCrop（丢边缘 HUD/小地图），letterbox 不失真也不丢信息，几何一致后测试准确率从 99.40% 提升到 99.90%。
+相比把 16:9 硬压成正方形（失真）或 Resize+CenterCrop（丢边缘 HUD/小地图），letterbox 不失真也不丢信息（早期 10 类实验中，几何统一把测试准确率从 99.40% 提升到 99.90%）。
 
 ### 数据增强（仅训练集）
 
@@ -50,23 +56,26 @@ ARCRaiders · Among Us · Apex Legends · CounterStrike2 · Fortnite · Forza Ho
 项目按小组分工拆为三个子包，`config.py` 为三组共用契约，留在根目录：
 
 ```
-├── config.py              # 【共享】超参数、类别名称、路径常量；默认 DATASET_DIR=dataset_combined
-├── data/                  # 【数据组】
-│   ├── data.py            #   HF / 本地数据加载、分层切分、平衡采样、数据增强
-│   ├── export_hf_dataset.py # HF baseline 导出成本地 ImageFolder
-│   ├── collect_data.py    #   YouTube 视频下载 + 时间区间抽帧
-│   ├── clean_data.py      #   坏图 / 低质量 / 重复帧清洗
-│   ├── report_data.py     #   类别分布、尺寸分布、切分计划统计
-│   └── HANDOFF.md         #   数据组给模型组的交接说明
-├── model/                 # 【模型组】
-│   ├── model.py           #   ResNet-50（替换 FC 层）
-│   ├── train.py           #   训练循环，保存最优检查点
-│   └── eval.py            #   测试评估、混淆矩阵、训练曲线
-├── demo/                  # 【Demo 组】
-│   ├── app.py             #   Gradio 演示界面（前端）
-│   └── screen_crop.py     #   手机屏幕检测 + 透视矫正
+├── config.py                      # 【共享】超参数、类别名、路径常量；DATASET_DIR=dataset_combined
+├── data/                          # 【数据组】
+│   ├── data.py                    #   HF / 本地数据加载、分层切分、平衡采样、数据增强
+│   ├── collect_data.py            #   YouTube 下载 + 时间区间抽帧 + pHash 去重（底层引擎）
+│   ├── collect_youtube_to_1000.py #   按预设搜索词把每个 YouTube 类采到 1000 张
+│   ├── export_hf_dataset.py       #   HF baseline 导出成本地 ImageFolder
+│   ├── build_combined_dataset.py  #   合并 dataset_hf + dataset_youtube_hq → 17 类
+│   ├── clean_data.py              #   坏图 / 低质量 / 重复帧清洗
+│   └── report_data.py             #   类别分布、尺寸分布、切分计划统计
+├── model/                         # 【模型组】
+│   ├── model.py                   #   ResNet-50（替换 FC 层 → 17 类）
+│   ├── train.py                   #   训练循环，保存最优检查点
+│   └── eval.py                    #   测试评估、混淆矩阵、训练曲线
+├── demo/                          # 【Demo 组】
+│   ├── app.py                     #   Gradio 界面（截图 / 拍屏；拍屏自动开摄像头）
+│   └── screen_crop.py             #   手机屏幕检测 + 透视矫正
+├── DATA_COLLECTION.md             # 数据采集方法与复现步骤
 ├── requirements.txt
-└── best_model.pth         # 训练后生成（不纳入 git）
+├── LICENSE                        # MIT
+└── best_model.pth                 # 已附带：17 类训练好的模型（test 99.53%）
 ```
 
 > **运行约定**：所有脚本一律**从项目根目录**执行（如 `python model/train.py`）。
@@ -103,7 +112,7 @@ python demo/app.py
 
 - 启动后本地访问 **http://localhost:7860**
 - `app.py` 中 `demo.launch(share=True)` 会同时打印一个公网 `*.gradio.live` 链接，可分享给他人临时访问
-- 界面提供两种模式（radio 切换）：**直接截图分类** 与 **拍屏模式**
+- 界面提供两种模式（radio 切换）：**直接截图分类**（上传/粘贴）与 **拍屏模式**（切到该模式自动开启摄像头取景，拍一张即自动检测屏幕 + 透视矫正）
 - 首次进入拍屏模式时自动下载 Mobile SAM 权重（~40 MB）；国内若直连 huggingface.co 卡住，可先手动下载：
 
 ```bash
@@ -136,18 +145,14 @@ python data/report_data.py --dataset-dir dataset_hf --output dataset_hf_report.j
 
 ### 前置：YouTube 解析依赖（必需）
 
-YouTube 现在用 JS "n-challenge" 门控视频格式，yt-dlp 需要**两样东西**才能下载，缺一即
-`n challenge solving failed` / `No supported JavaScript runtime`：
+YouTube 现在用 JS "n-challenge" 门控视频格式，缺少 JS runtime 会报
+`n challenge solving failed` / `No supported JavaScript runtime`。装 **deno** 即可：
 
-1. **JS runtime**（deno）：
+```bash
+winget install denoland.deno
+```
 
-   ```bash
-   winget install denoland.deno
-   ```
-
-   装完即可 —— `collect_data.py` 会**自动探测** winget/scoop 安装的 deno 并注入 PATH（`ensure_deno_on_path()`），无需手动设环境变量。若未找到会打印安装提示。
-
-2. **EJS 远程挑战求解脚本**：已固化在 `collect_data.py`（`--remote-components ejs:github`），首次运行自动从 GitHub 拉取，无需手动操作。
+`collect_data.py` 会**自动探测** winget/scoop 安装的 deno 并注入 PATH（`ensure_deno_on_path()`），无需手动设环境变量。视频下载统一走 YouTube Android / Android VR 客户端（`player_client=android_vr,android`）绕过网页端 SABR 限制，拿到真实 MP4 流。
 
 ### 用法
 
@@ -218,18 +223,18 @@ python data/report_data.py --dataset-dir dataset
 
 ## 训练与评估
 
-```bash
-# 训练 —— 保存 best_model.pth 和 training_history.json
-python model/train.py
+仓库已附带训练好的 `best_model.pth`（17 类），想自己重训按下面来。**必须设 `DATA_SOURCE=local`**，否则会去在线下载 HF 10 类基线，与 17 类合并集对不上。
 
-# 使用本地 dataset/<GameName>/ 数据训练
-DATA_SOURCE=local python model/train.py
+```powershell
+# 训练 —— 用本地 17 类合并集，保存 best_model.pth 和 training_history.json
+$env:DATA_SOURCE='local'; python model/train.py
 
 # 评估 —— 打印分类报告，保存 confusion_matrix.png / training_curves.png
-python model/eval.py
+$env:DATA_SOURCE='local'; python model/eval.py
 ```
 
-> 后台运行这些脚本时 Python stdout 块缓冲，日志要进程退出才一次性刷新；想实时看日志加环境变量 `PYTHONUNBUFFERED=1`，判断训练是否真在跑可用 `nvidia-smi` 看 GPU 占用。
+> 不设 `DATA_SOURCE` 时默认走在线 HF 10 类基线（保留原始可复现实验）。
+> 后台运行时 Python stdout 块缓冲，想实时看日志加 `$env:PYTHONUNBUFFERED='1'`；判断训练是否真在跑可用 `nvidia-smi` 看 GPU 占用。
 
 ## 拍屏模式说明
 
@@ -282,3 +287,9 @@ LeagueOfLegends       1.00      1.00      1.00       100
 ```
 
 误分类均为个位数，集中在写实画风/同类型游戏之间。混淆矩阵见 `confusion_matrix.png`。
+
+## License
+
+本项目以 [MIT License](LICENSE) 开源。
+
+> 数据来自 [Bingsu/Gameplay_Images](https://huggingface.co/datasets/Bingsu/Gameplay_Images) 及 YouTube 公开 gameplay 视频抽帧，仅用于学习与研究；各游戏画面版权归其各自发行商所有。
