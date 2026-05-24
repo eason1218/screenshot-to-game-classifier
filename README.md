@@ -33,24 +33,56 @@ Machine Learning 2 Final Project — by **Yizhuo Li**, **Elaine Wang**, **Cecili
 
 ## Architecture
 
-Three sub-packages around a shared `config.py` contract, with two data flows — one for training, one for inference:
+Three sub-packages coordinated by a single shared `config.py` contract.
 
+### Components
+
+```mermaid
+flowchart TB
+    cfg["config.py<br/>classes · paths · hyperparameters"]
+    cfg --> data
+    cfg --> model
+    cfg --> demo
+
+    subgraph data["data/ — Data team"]
+        d1["collect · clean · merge"]
+        d2["DataLoader + LetterboxResize"]
+    end
+    subgraph model["model/ — Model team"]
+        m1["ResNet-50"]
+        m2["train · eval"]
+    end
+    subgraph demo["demo/ — Demo team"]
+        g1["Gradio UI"]
+        g2["screen detection +<br/>perspective correction"]
+    end
 ```
-                        ┌──────────────────────────────────────────┐
-                        │                config.py                   │
-                        │   classes · paths · hyperparameters        │
-                        └──────────────────────────────────────────┘
-                            │               │                  │
-            ┌───────────────▼───┐  ┌────────▼────────┐  ┌──────▼─────────────┐
-            │      data/         │  │     model/       │  │      demo/          │
-            │ collect · clean    │  │  ResNet-50       │  │  Gradio UI          │
-            │ merge · DataLoader │  │  train · eval    │  │  screen detection   │
-            └─────────┬──────────┘  └────────┬─────────┘  └─────────┬──────────┘
-                      │                       │                      │
-  Training flow:  dataset_combined ──► train.py ──► best_model.pth   │
-                                                          │          │
-  Inference flow:  photo / screenshot ─► screen_crop ─► letterbox ─► best_model.pth ─► Top-3
+
+### Training pipeline
+
+```mermaid
+flowchart LR
+    A["YouTube videos<br/>+ HF baseline"] --> B["collect · clean<br/>pHash dedup"]
+    B --> C["dataset_combined<br/>17 classes × 1,000"]
+    C --> D["DataLoader<br/>letterbox + augment"]
+    D --> E["ResNet-50<br/>fine-tune"]
+    E --> F["best_model.pth"]
 ```
+
+### Inference pipeline
+
+```mermaid
+flowchart LR
+    A["screenshot /<br/>photo of screen"] --> B{"photo<br/>mode?"}
+    B -->|yes| C["screen detection<br/>Mobile SAM → CV fallback"]
+    C --> D["perspective<br/>correction"]
+    B -->|no| E["letterbox<br/>224×224"]
+    D --> E
+    E --> F["ResNet-50"]
+    F --> G["Top-3 + confidence"]
+```
+
+### Modules
 
 | Module | Responsibility | Key tech |
 |--------|----------------|----------|
